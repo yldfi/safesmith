@@ -46,6 +46,11 @@ class EtherscanSettings(BaseSettings):
     api_key: str = Field(default="", env="ETHERSCAN_API_KEY")
 
 
+class SafeApiSettings(BaseSettings):
+    """Safe Global API settings."""
+    api_key: str = Field(default="", env="SAFE_API_KEY")
+
+
 class SafeSettings(BaseSettings):
     """Gnosis Safe related settings."""
     safe_address: str = ""
@@ -107,11 +112,12 @@ class TomlConfigSettingsSource(PydanticBaseSettingsSource):
 
 class SafesmithSettings(BaseSettings):
     """Main settings class for safesmith."""
-    
+
     cache: CacheSettings = Field(default_factory=CacheSettings)
     interfaces: InterfacesSettings = Field(default_factory=InterfacesSettings)
     presets: PresetsSettings = Field(default_factory=PresetsSettings)
     etherscan: EtherscanSettings = Field(default_factory=EtherscanSettings)
+    safe_api: SafeApiSettings = Field(default_factory=SafeApiSettings)
     safe: SafeSettings = Field(default_factory=SafeSettings)
     rpc: RpcSettings = Field(default_factory=RpcSettings)
     

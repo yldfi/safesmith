@@ -222,21 +222,40 @@ class SafeTransactionBuilder:
             'origin': 'safesmith-script'
         }
 
+def _get_safe_api_headers() -> dict:
+    """Get headers for Safe API requests, including auth if configured."""
+    headers = {'Content-Type': 'application/json'}
+
+    # Try to load API key from settings or environment
+    api_key = os.environ.get('SAFE_API_KEY', '')
+    if not api_key:
+        try:
+            settings = load_settings()
+            api_key = settings.safe_api.api_key
+        except Exception:
+            pass
+
+    if api_key:
+        headers['Authorization'] = f'Bearer {api_key}'
+
+    return headers
+
+
 @handle_errors(error_type=NetworkError)
 def fetch_next_nonce(safe_address: str, chain_id: str = "1") -> int:
     """
     Fetch the next nonce for a Safe from the Safe Transaction Service API
-    
+
     Args:
         safe_address: The address of the Safe
         chain_id: The chain ID (default: "1" for Ethereum mainnet)
-    
+
     Returns:
         The recommended nonce for the Safe
     """
     url = f'https://safe-client.safe.global/v1/chains/{chain_id}/safes/{safe_address}/nonces'
-    headers = {'Content-Type': 'application/json'}
-    
+    headers = _get_safe_api_headers()
+
     response = requests.get(url, headers=headers)
     response.raise_for_status()
     data = response.json()
@@ -309,18 +328,18 @@ def get_proposer_address(proposer: str = None, password: str = None, is_hw_walle
 def submit_safe_tx(tx_json: Dict[str, Any], chain_id: str = "1") -> Dict[str, Any]:
     """
     Submit a Safe transaction to the Safe Transaction Service API
-    
+
     Args:
         tx_json: The transaction JSON to submit
         chain_id: The chain ID (default: "1" for Ethereum mainnet)
-    
+
     Returns:
         The response JSON from the API
     """
     safe_address = tx_json['safe']
     url = f'https://safe-client.safe.global/v1/chains/{chain_id}/transactions/{safe_address}/propose'
-    headers = {'Content-Type': 'application/json'}
-    
+    headers = _get_safe_api_headers()
+
     print("Submitting transaction to Safe API...")
     
     response = requests.post(url, headers=headers, json=tx_json)
