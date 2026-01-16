@@ -241,6 +241,25 @@ def _get_safe_api_headers() -> dict:
     return headers
 
 
+def _get_transaction_service_url(chain_id: str) -> str:
+    """Get the Transaction Service base URL for a given chain ID."""
+    chain_id_int = int(chain_id)
+    network_map = {
+        1: "mainnet",
+        5: "goerli",
+        10: "optimism",
+        56: "bsc",
+        100: "gnosis-chain",
+        137: "polygon",
+        8453: "base",
+        42161: "arbitrum",
+        43114: "avalanche",
+        11155111: "sepolia",
+    }
+    network = network_map.get(chain_id_int, f"chain-{chain_id_int}")
+    return f"https://safe-transaction-{network}.safe.global"
+
+
 @handle_errors(error_type=NetworkError)
 def fetch_next_nonce(safe_address: str, chain_id: str = "1") -> int:
     """
@@ -253,13 +272,14 @@ def fetch_next_nonce(safe_address: str, chain_id: str = "1") -> int:
     Returns:
         The recommended nonce for the Safe
     """
-    url = f'https://safe-client.safe.global/v1/chains/{chain_id}/safes/{safe_address}/nonces'
+    base_url = _get_transaction_service_url(chain_id)
+    url = f'{base_url}/api/v1/safes/{safe_address}/'
     headers = _get_safe_api_headers()
 
     response = requests.get(url, headers=headers)
     response.raise_for_status()
     data = response.json()
-    return data['recommendedNonce']
+    return data['nonce']
 
 @handle_errors(error_type=SafeError)
 def checksum_address(address: str) -> str:
@@ -337,7 +357,8 @@ def submit_safe_tx(tx_json: Dict[str, Any], chain_id: str = "1") -> Dict[str, An
         The response JSON from the API
     """
     safe_address = tx_json['safe']
-    url = f'https://safe-client.safe.global/v1/chains/{chain_id}/transactions/{safe_address}/propose'
+    base_url = _get_transaction_service_url(chain_id)
+    url = f'{base_url}/api/v1/safes/{safe_address}/multisig-transactions/'
     headers = _get_safe_api_headers()
 
     print("Submitting transaction to Safe API...")
