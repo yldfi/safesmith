@@ -204,6 +204,7 @@ class SafeTransactionBuilder:
         if signature and not signature.startswith('0x'):
             signature = '0x' + signature
             
+        tx_hash = '0x' + safe_tx.safe_tx_hash.hex().replace('0x', '')
         return {
             'safe': self.safe_address,
             'to': safe_tx.to,
@@ -214,7 +215,8 @@ class SafeTransactionBuilder:
             'safeTxGas': str(safe_tx.safe_tx_gas),
             'baseGas': str(safe_tx.base_gas),
             'gasPrice': str(safe_tx.gas_price),
-            'safeTxHash': '0x' + safe_tx.safe_tx_hash.hex().replace('0x', ''),
+            'safeTxHash': tx_hash,
+            'contractTransactionHash': tx_hash,
             'refundReceiver': safe_tx.refund_receiver,
             'nonce': str(safe_tx.safe_nonce),
             'sender': signer_address,
@@ -361,8 +363,8 @@ def submit_safe_tx(tx_json: Dict[str, Any], chain_id: str = "1") -> Dict[str, An
     url = f'{base_url}/api/v1/safes/{safe_address}/multisig-transactions/'
     headers = _get_safe_api_headers()
 
-    print("Submitting transaction to Safe API...")
-    
+    print(f"Submitting transaction to Safe API: {url}")
+
     response = requests.post(url, headers=headers, json=tx_json)
     
     # Don't raise exception yet to capture error response
@@ -375,7 +377,15 @@ def submit_safe_tx(tx_json: Dict[str, Any], chain_id: str = "1") -> Dict[str, An
         except:
             print(f"Raw response: {response.text}")
         response.raise_for_status()  # Now raise the exception
-    return response.json()
+
+    # Handle successful responses (may have empty body)
+    if response.status_code in (200, 201):
+        print(f"Success ({response.status_code})")
+        try:
+            return response.json()
+        except:
+            return {"status": "success", "code": response.status_code}
+    return {}
 
 def process_safe_transaction(
     script_path: str,
